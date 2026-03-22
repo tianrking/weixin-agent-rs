@@ -1,0 +1,28 @@
+[package]
+name = "wechat_rs_sdk"
+version = "0.1.0"
+edition = "2024"
+description = "WeChat iLink bot Rust SDK with pluggable agent interface"
+license = "MIT"
+
+[dependencies]
+async-trait = "0.1"
+aes = "0.8"
+ecb = { version = "0.1", features = ["alloc"] }
+base64 = "0.22"
+bytes = "1"
+hex = "0.4"
+md5 = "0.8"
+mime_guess = "2"
+rand = "0.9"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1", features = ["fs", "macros", "rt-multi-thread", "time"] }
+tracing = "0.1"
+urlencoding = "2"
+uuid = { version = "1", features = ["v4"] }
+
+[dev-dependencies]
+tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
