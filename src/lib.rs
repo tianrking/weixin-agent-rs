@@ -10,6 +10,6 @@ pub mod monitor;
 pub mod storage;
 pub mod util;
 
-pub use agent::{Agent, ChatRequest, ChatResponse, MediaInput, MediaOutput};
+pub use agent::{Agent, ChatRequest, ChatResponse, MediaInput, MediaKind, MediaOutKind, MediaOutput};
 pub use bot::{Bot, LoginOptions, StartOptions};
 pub use error::{Result, WechatError};

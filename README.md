@@ -1,34 +1,99 @@
 # wechat-rs-sdk
 
-Rust 版本的 WeChat iLink Bot SDK，支持扫码登录、长轮询收发、媒体上传下载（AES-128-ECB）、多账号状态持久化，以及可插拔 Agent 接口。
+A modern Rust SDK for running WeChat iLink bots with pluggable AI agents.
 
-## 功能覆盖
+It implements the full practical pipeline used by the TypeScript reference projects:
 
-- QR 扫码登录（`get_bot_qrcode` + `get_qrcode_status`）
-- 长轮询接收消息（`getupdates`）
-- 文本消息收发（`sendmessage`）
-- 图片/视频/文件媒体发送（`getuploadurl` + CDN 上传）
-- 图片/视频/文件/语音媒体接收（CDN 下载 + 解密）
-- typing 指示（`getconfig` + `sendtyping`）
-- `get_updates_buf` 断点续拉落盘
-- 会话过期（`errcode = -14`）冷却保护
-- Agent 抽象接口，方便接 OpenAI / Claude / 自研模型
+- QR login (`get_bot_qrcode`, `get_qrcode_status`)
+- Long polling (`getupdates`) with persistent `get_updates_buf`
+- Text messaging (`sendmessage`)
+- Media upload (`getuploadurl` + CDN upload)
+- Media download/decrypt from CDN (AES-128-ECB)
+- Typing status (`getconfig`, `sendtyping`)
+- Session-expired cooldown handling (`errcode = -14`)
+- Multi-account local credential persistence
+- Agent abstraction to connect OpenAI, Anthropic, ACP-compatible agents, or your own backend
 
-## 快速开始
+For Chinese docs, see [README.zh-CN.md](./README.zh-CN.md).
+
+## Requirements
+
+- Rust stable (1.78+ recommended)
+- WeChat iLink API availability
+
+## Quick Start
 
 ```bash
 cd /Volumes/ok/Linux_dev_rewrite/wechat_dev/wechat-rs-sdk
+cargo check --examples
+
+# login first
 cargo run --example echo -- login
+
+# start bot
 cargo run --example echo
 ```
 
-## Agent 接口
+## Examples
 
-```rust
-#[async_trait::async_trait]
-trait Agent {
-    async fn chat(&self, request: ChatRequest) -> Result<ChatResponse>;
-}
+- `echo`: minimal echo bot
+- `openai`: OpenAI Chat Completions integration
+- `anthropic`: Anthropic Messages API integration
+- `acp`: ACP subprocess adapter (Claude/Codex/Kimi style ACP agents)
+
+### OpenAI Example
+
+```bash
+export OPENAI_API_KEY=sk-...
+export OPENAI_MODEL=gpt-5.4
+cargo run --example openai -- login
+cargo run --example openai
 ```
 
-`ChatRequest` 包含 `conversation_id`、`text`、可选 `media`（本地已解密路径）。
+### Anthropic Example
+
+```bash
+export ANTHROPIC_API_KEY=...
+export ANTHROPIC_MODEL=claude-sonnet-4-20250514
+cargo run --example anthropic -- login
+cargo run --example anthropic
+```
+
+### ACP Example
+
+```bash
+# default launches: npx -y @zed-industries/codex-acp
+cargo run --example acp -- login
+cargo run --example acp
+```
+
+Optional ACP overrides:
+
+```bash
+export ACP_COMMAND=npx
+export ACP_ARGS="-y @zed-industries/claude-agent-acp"
+cargo run --example acp
+```
+
+## Public API
+
+Core entry points:
+
+- `Bot::login(LoginOptions)`
+- `Bot::start(agent, StartOptions)`
+- `Agent` trait (`chat(ChatRequest) -> ChatResponse`)
+
+ACP adapter:
+
+- `wechat_rs_sdk::agent::acp::AcpAgent`
+- `wechat_rs_sdk::agent::acp::AcpAgentOptions`
+
+## CI
+
+GitHub Actions CI is included for:
+
+- Ubuntu
+- Windows
+- macOS
+
+Workflow file: `.github/workflows/ci.yml`
