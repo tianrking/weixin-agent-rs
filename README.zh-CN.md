@@ -47,6 +47,19 @@ cargo run --bin wechat-agent -- --agent claude --account <account_id>
 
 `account_id` 可以从登录成功输出里拿到（例如：`login success: xxx-im-bot`）。
 
+## 运行时行为
+
+- 入站日志会打印：发送方、消息类型、文本预览。
+- 出站日志会打印：回复类型（`text` / `media` / `fallback`）。
+- 如果 Agent 返回空响应，SDK 会自动发兜底文本：
+  - `（模型本轮未返回内容，请再发一次）`
+
+## 排障
+
+- `session expired (errcode -14)`：token 过期，请重新登录，或强制指定账号：
+  - `cargo run --bin wechat-agent -- --agent claude --account <account_id>`
+- 多账号场景建议始终带 `--account <account_id>`。
+
 其他也支持：
 
 ```bash

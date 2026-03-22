@@ -126,6 +126,32 @@ impl MonitorRunner {
             let messages = resp.msgs.unwrap_or_default();
             for msg in messages {
                 let user = msg.from_user_id.clone().unwrap_or_default();
+                let item_types = msg
+                    .item_list
+                    .as_ref()
+                    .map(|items| {
+                        items
+                            .iter()
+                            .filter_map(|i| i.item_type.map(|t| t.to_string()))
+                            .collect::<Vec<_>>()
+                            .join(",")
+                    })
+                    .unwrap_or_else(|| "none".to_string());
+                let text_preview = msg
+                    .item_list
+                    .as_ref()
+                    .and_then(|items| {
+                        items
+                            .iter()
+                            .find_map(|i| i.text_item.as_ref().and_then(|t| t.text.clone()))
+                    })
+                    .unwrap_or_default();
+                info!(
+                    "inbound message: from={} types={} text={}",
+                    user,
+                    item_types,
+                    truncate_for_log(&text_preview, 120)
+                );
                 let cfg = self
                     .config_manager
                     .get_for_user(api, &user, msg.context_token.as_deref())
@@ -149,4 +175,11 @@ impl MonitorRunner {
             info!("poll cycle done, messages={message_count}");
         }
     }
+}
+
+fn truncate_for_log(input: &str, max_chars: usize) -> String {
+    if input.chars().count() <= max_chars {
+        return input.to_string();
+    }
+    input.chars().take(max_chars).collect::<String>() + "..."
 }

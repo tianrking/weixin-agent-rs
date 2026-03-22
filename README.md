@@ -52,6 +52,19 @@ cargo run --bin wechat-agent -- --agent claude --account <account_id>
 
 You can get account IDs from successful login output (e.g. `login success: xxx-im-bot`).
 
+## Runtime Behavior
+
+- Inbound message logs include sender, item types, and text preview.
+- Outbound logs include reply kind (`text`, `media`, `fallback`).
+- If an agent returns an empty response, SDK sends a fallback text automatically:
+  - `（模型本轮未返回内容，请再发一次）`
+
+## Troubleshooting
+
+- `session expired (errcode -14)`: token is expired. Run login again and/or force account:
+  - `cargo run --bin wechat-agent -- --agent claude --account <account_id>`
+- If you have multiple accounts, always prefer `--account <account_id>`.
+
 Also supported:
 
 ```bash

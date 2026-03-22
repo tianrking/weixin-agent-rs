@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use tracing::{info, warn};
+
 use crate::agent::{Agent, ChatRequest, MediaInput, MediaKind};
 use crate::api::client::WeixinApiClient;
 use crate::api::types::{enums, MessageItem, WeixinMessage};
@@ -137,8 +139,14 @@ pub async fn process_one_message<A: Agent>(
             response.text.as_deref(),
         )
         .await?;
+        info!("outbound reply sent: to={} kind=media", from);
     } else if let Some(text) = response.text {
         send_text(api, &from, &context_token, &text).await?;
+        info!("outbound reply sent: to={} kind=text", from);
+    } else {
+        warn!("agent returned empty response; sending fallback text to={}", from);
+        send_text(api, &from, &context_token, "（模型本轮未返回内容，请再发一次）").await?;
+        info!("outbound reply sent: to={} kind=fallback", from);
     }
 
     if let Some(ticket) = typing_ticket {
