@@ -1,0 +1,153 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  BIN_NAME: wechat-agent
+
+jobs:
+  linux-deb:
+    name: linux-deb (${{ matrix.ubuntu }})
+    runs-on: ${{ matrix.ubuntu }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - ubuntu: ubuntu-22.04
+            distro: ubuntu22.04
+          - ubuntu: ubuntu-24.04
+            distro: ubuntu24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-deb
+        run: cargo install cargo-deb --locked
+
+      - name: Build binary
+        run: cargo build --release --bin ${{ env.BIN_NAME }}
+
+      - name: Build deb package
+        run: |
+          mkdir -p dist
+          VERSION="${GITHUB_REF_NAME#v}"
+          cargo deb --no-build --output "dist/${{ env.BIN_NAME }}_${VERSION}_${{ matrix.distro }}_amd64.deb"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.distro }}-deb
+          path: dist/*.deb
+          if-no-files-found: error
+
+  windows-exe:
+    name: windows-exe
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build Windows binary
+        run: cargo build --release --bin $env:BIN_NAME
+
+      - name: Package exe
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          $version = $env:GITHUB_REF_NAME.TrimStart("v")
+          Copy-Item "target/release/${env:BIN_NAME}.exe" "dist/${env:BIN_NAME}-$version-windows-x86_64.exe"
+          Compress-Archive -Path "dist/${env:BIN_NAME}-$version-windows-x86_64.exe" -DestinationPath "dist/${env:BIN_NAME}-$version-windows-x86_64.zip" -Force
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-exe
+          path: dist/*
+          if-no-files-found: error
+
+  macos-dmg:
+    name: macos-dmg (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-13
+            arch: x86_64
+          - os: macos-14
+            arch: arm64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build macOS binary
+        run: cargo build --release --bin ${{ env.BIN_NAME }}
+
+      - name: Create DMG
+        run: |
+          set -euo pipefail
+          mkdir -p dist/stage
+          VERSION="${GITHUB_REF_NAME#v}"
+          cp "target/release/${BIN_NAME}" "dist/stage/${BIN_NAME}"
+          chmod +x "dist/stage/${BIN_NAME}"
+          cp README.md dist/stage/README.md
+          hdiutil create \
+            -volname "wechat-agent" \
+            -srcfolder dist/stage \
+            -ov \
+            -format UDZO \
+            "dist/${BIN_NAME}-${VERSION}-macos-${{ matrix.arch }}.dmg"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.arch }}-dmg
+          path: dist/*.dmg
+          if-no-files-found: error
+
+  release:
+    name: github-release
+    needs: [linux-deb, windows-exe, macos-dmg]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+
+      - name: List artifacts
+        run: find release-artifacts -type f | sort
+
+      - name: Publish to GitHub Releases
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-artifacts/**/*
+          generate_release_notes: true

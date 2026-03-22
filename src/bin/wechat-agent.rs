@@ -233,7 +233,7 @@ impl Cli {
 
 fn print_help_and_exit() -> ! {
     println!(
-        "wechat-agent\n\nUSAGE:\n  cargo run --bin wechat-agent -- [login|--login] [--agent <name>] [--account <id>] [--acp-command <cmd>] [--acp-args \"...\"]\n\nAGENTS:\n  claude | codex | openclaw | acp | openai | anthropic | echo\n\nEXAMPLES:\n  cargo run --bin wechat-agent -- --login --agent codex\n  cargo run --bin wechat-agent -- --agent claude\n  cargo run --bin wechat-agent -- --agent openai\n"
+        "wechat-agent\n\nUSAGE:\n  wechat-agent [login|--login] [--agent <name>] [--account <id>] [--acp-command <cmd>] [--acp-args \"...\"]\n\nAGENTS:\n  claude | codex | openclaw | acp | openai | anthropic | echo\n\nEXAMPLES:\n  wechat-agent --login --agent codex\n  wechat-agent --agent claude --account <account_id>\n  OPENAI_API_KEY=... wechat-agent --agent openai\n"
     );
     std::process::exit(0);
 }

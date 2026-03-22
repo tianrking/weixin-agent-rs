@@ -31,6 +31,17 @@ Versiones de idioma:
 wechat-agent --login --agent codex
 ```
 
+## Descarga de CLI Precompilado
+
+Descarga los paquetes por plataforma desde Releases:  
+<https://github.com/tianrking/weixin-agent-rs/releases>
+
+- macOS Intel: `wechat-agent-<version>-macos-x86_64.dmg`
+- macOS Apple Silicon: `wechat-agent-<version>-macos-arm64.dmg`
+- Ubuntu 22.04: `wechat-agent_<version>_ubuntu22.04_amd64.deb`
+- Ubuntu 24.04: `wechat-agent_<version>_ubuntu24.04_amd64.deb`
+- Windows: `wechat-agent-<version>-windows-x86_64.exe`
+
 ## Un Comando Para Agentes Locales
 
 ```bash

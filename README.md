@@ -71,6 +71,17 @@ wechat-agent --agent claude --account <account_id>
 wechat-agent --login --agent codex
 ```
 
+## 预编译 CLI 下载
+
+从 Releases 下载对应平台安装包：  
+<https://github.com/tianrking/weixin-agent-rs/releases>
+
+- macOS Intel: `wechat-agent-<version>-macos-x86_64.dmg`
+- macOS Apple Silicon: `wechat-agent-<version>-macos-arm64.dmg`
+- Ubuntu 22.04: `wechat-agent_<version>_ubuntu22.04_amd64.deb`
+- Ubuntu 24.04: `wechat-agent_<version>_ubuntu24.04_amd64.deb`
+- Windows: `wechat-agent-<version>-windows-x86_64.exe`
+
 ## 一条命令接入本地 Agent
 
 ```bash

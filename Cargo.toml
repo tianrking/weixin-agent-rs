@@ -4,6 +4,23 @@ version = "0.1.0"
 edition = "2024"
 description = "WeChat iLink bot Rust SDK with pluggable agent interface"
 license = "MIT"
+repository = "https://github.com/tianrking/weixin-agent-rs"
+
+[package.metadata.deb]
+name = "wechat-agent"
+maintainer = "tianrking <tian.r.king@gmail.com>"
+copyright = "2026, tianrking"
+license-file = ["LICENSE", "4"]
+depends = "$auto"
+section = "utils"
+priority = "optional"
+extended-description = "Cross-platform WeChat iLink bot CLI with pluggable ACP/OpenAI/Anthropic agents."
+assets = [
+  ["target/release/wechat-agent", "usr/bin/wechat-agent", "755"],
+  ["README.md", "usr/share/doc/wechat-agent/README.md", "644"],
+  ["README.en.md", "usr/share/doc/wechat-agent/README.en.md", "644"],
+  ["README.es.md", "usr/share/doc/wechat-agent/README.es.md", "644"],
+]
 
 [dependencies]
 async-trait = "0.1"
