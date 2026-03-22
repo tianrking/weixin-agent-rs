@@ -100,8 +100,9 @@ impl MonitorRunner {
             if resp.ret.unwrap_or(0) != 0 || resp.errcode.unwrap_or(0) != 0 {
                 let code = resp.errcode.unwrap_or(resp.ret.unwrap_or(0));
                 if code == SESSION_EXPIRED_ERRCODE {
-                    error!("session expired, cooling down 1h");
-                    self.pause_until = Some(std::time::Instant::now() + Duration::from_secs(3600));
+                    return Err(crate::error::WechatError::Api(
+                        "session expired (errcode -14), please run login again".to_string(),
+                    ));
                 } else {
                     warn!(
                         "getupdates api error ret={:?} errcode={:?} msg={:?}",

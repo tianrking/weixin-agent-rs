@@ -39,6 +39,14 @@ cargo run --bin wechat-agent -- --login --agent codex
 cargo run --bin wechat-agent -- --login --agent openclaw
 ```
 
+强制指定账号（推荐多账号场景使用）：
+
+```bash
+cargo run --bin wechat-agent -- --agent claude --account <account_id>
+```
+
+`account_id` 可以从登录成功输出里拿到（例如：`login success: xxx-im-bot`）。
+
 其他也支持：
 
 ```bash

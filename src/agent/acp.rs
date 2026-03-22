@@ -115,6 +115,8 @@ impl AcpAgent {
 
         let read_pending = Arc::clone(&pending);
         let read_collectors = Arc::clone(&collectors);
+        let read_stdin = Arc::new(Mutex::new(stdin));
+        let read_stdin_loop = Arc::clone(&read_stdin);
         tokio::spawn(async move {
             let mut lines = BufReader::new(stdout).lines();
             while let Ok(Some(line)) = lines.next_line().await {
@@ -124,6 +126,40 @@ impl AcpAgent {
                     Ok(v) => v,
                     Err(_) => continue,
                 };
+
+                if let (Some(id), Some(method)) = (envelope.id, envelope.method.clone()) {
+                    // Agent -> Client request, handle known client methods.
+                    if method == "session/request_permission" {
+                        let option_id = envelope
+                            .params
+                            .as_ref()
+                            .and_then(|p| p.get("options"))
+                            .and_then(|v| v.as_array())
+                            .and_then(|arr| arr.first())
+                            .and_then(|v| v.get("id"))
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("allow");
+
+                        let reply = json!({
+                            "jsonrpc": "2.0",
+                            "id": id,
+                            "result": {
+                                "outcome": {
+                                    "outcome": "selected",
+                                    "optionId": option_id
+                                }
+                            }
+                        });
+
+                        if let Ok(line) = serde_json::to_string(&reply) {
+                            let mut writer = read_stdin_loop.lock().await;
+                            let _ = writer.write_all(line.as_bytes()).await;
+                            let _ = writer.write_all(b"\n").await;
+                            let _ = writer.flush().await;
+                        }
+                        continue;
+                    }
+                }
 
                 if let Some(id) = envelope.id {
                     let tx = {
@@ -140,7 +176,7 @@ impl AcpAgent {
                     continue;
                 }
 
-                if envelope.method.as_deref() == Some("sessionUpdate") {
+                if envelope.method.as_deref() == Some("session/update") {
                     let params = envelope.params.unwrap_or(Value::Null);
                     let session_id = params
                         .get("sessionId")
@@ -178,7 +214,7 @@ impl AcpAgent {
 
         let agent = Self {
             inner: Arc::new(Mutex::new(Inner {
-                stdin: Arc::new(Mutex::new(stdin)),
+                stdin: read_stdin,
                 request_id: 1,
                 pending,
                 collectors,
@@ -256,7 +292,7 @@ impl AcpAgent {
 
         let result = self
             .rpc_call(
-                "newSession",
+                "session/new",
                 json!({
                     "cwd": cwd,
                     "mcpServers": []
@@ -323,7 +359,7 @@ impl AcpAgent {
         timeout(
             wait,
             self.rpc_call(
-                "prompt",
+                "session/prompt",
                 json!({
                     "sessionId": session_id,
                     "prompt": blocks,

@@ -47,9 +47,8 @@ pub fn normalize_account_id(raw: &str) -> String {
 pub fn register_account_id(account_id: &str) -> std::io::Result<()> {
     fs::create_dir_all(weixin_dir())?;
     let mut ids = list_account_ids();
-    if !ids.iter().any(|v| v == account_id) {
-        ids.push(account_id.to_string());
-    }
+    ids.retain(|v| v != account_id);
+    ids.push(account_id.to_string());
     fs::write(index_path(), serde_json::to_vec_pretty(&ids).unwrap_or_default())
 }
 
@@ -88,7 +87,7 @@ pub fn resolve_account(account_id: Option<&str>) -> Option<ResolvedAccount> {
     let selected = if let Some(id) = account_id {
         normalize_account_id(id)
     } else {
-        list_account_ids().first().cloned()?
+        list_account_ids().last().cloned()?
     };
 
     let data = load_account(&selected)?;

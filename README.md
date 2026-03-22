@@ -44,6 +44,14 @@ cargo run --bin wechat-agent -- --login --agent codex
 cargo run --bin wechat-agent -- --login --agent openclaw
 ```
 
+Force a specific logged-in account:
+
+```bash
+cargo run --bin wechat-agent -- --agent claude --account <account_id>
+```
+
+You can get account IDs from successful login output (e.g. `login success: xxx-im-bot`).
+
 Also supported:
 
 ```bash
