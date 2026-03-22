@@ -1,5 +1,8 @@
 use std::time::Duration;
 
+use qrcode::render::unicode;
+use qrcode::QrCode;
+
 use crate::agent::Agent;
 use crate::api::client::WeixinApiClient;
 use crate::auth::accounts::{normalize_account_id, register_account_id, resolve_account, save_account, AccountData, DEFAULT_BASE_URL};
@@ -35,7 +38,11 @@ impl Bot {
         let client = reqwest::Client::builder().build()?;
 
         let start = fetch_qr_code(&client, &base_url, DEFAULT_ILINK_BOT_TYPE).await?;
-        println!("请用微信扫描二维码链接:\n{}\n", start.qrcode_url);
+        println!("请使用微信 App 的“扫一扫”扫描下方二维码（不要在浏览器直接打开链接）:\n");
+        print_qr_terminal(&start.qrcode_url);
+        println!("\n二维码链接（备用）:\n{}\n", start.qrcode_url);
+        println!("网页扫码（第三方二维码图片，仅备用）：");
+        println!("{}\n", third_party_qr_image_url(&start.qrcode_url));
 
         let result = wait_for_qr_login(&client, &base_url, start, opts.timeout, None).await?;
         if !result.connected {
@@ -83,4 +90,21 @@ impl Bot {
             )
             .await
     }
+}
+
+fn print_qr_terminal(content: &str) {
+    if let Ok(code) = QrCode::new(content.as_bytes()) {
+        let rendered = code.render::<unicode::Dense1x2>().build();
+        println!("{rendered}");
+    } else {
+        println!("(二维码渲染失败)");
+    }
+}
+
+fn third_party_qr_image_url(content: &str) -> String {
+    let data = urlencoding::encode(content);
+    format!(
+        "https://api.qrserver.com/v1/create-qr-code/?size=360x360&data={}",
+        data
+    )
 }

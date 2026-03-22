@@ -71,8 +71,23 @@ async fn poll_qr_status(
         urlencoding::encode(qrcode)
     );
 
-    let req = client.get(url).headers(headers).timeout(Duration::from_millis(POLL_TIMEOUT_MS));
-    let resp = req.send().await?;
+    let req = client
+        .get(url)
+        .headers(headers)
+        .timeout(Duration::from_millis(POLL_TIMEOUT_MS));
+    let resp = match req.send().await {
+        Ok(v) => v,
+        Err(err) if err.is_timeout() => {
+            return Ok(StatusResponse {
+                status: "wait".to_string(),
+                bot_token: None,
+                ilink_bot_id: None,
+                baseurl: None,
+                ilink_user_id: None,
+            });
+        }
+        Err(err) => return Err(err.into()),
+    };
     if !resp.status().is_success() {
         return Err(WechatError::Api(format!("poll qr failed: {}", resp.status())));
     }
@@ -139,9 +154,7 @@ pub async fn wait_for_qr_login(
                 }
                 other => debug!("未知扫码状态: {other}"),
             },
-            Err(err) => {
-                warn!("轮询扫码状态失败: {err}");
-            }
+            Err(err) => debug!("轮询扫码状态失败(将重试): {err}"),
         }
 
         tokio::time::sleep(Duration::from_secs(1)).await;

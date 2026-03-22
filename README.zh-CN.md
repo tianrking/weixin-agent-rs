@@ -20,13 +20,33 @@
 
 ```bash
 cd /Volumes/ok/Linux_dev_rewrite/wechat_dev/wechat-rs-sdk
-cargo check --examples
+cargo check --all-targets
 
-# 先登录
-cargo run --example echo -- login
+# 一条命令（登录 + 启动 Codex ACP）
+cargo run --bin wechat-agent -- --login --agent codex
+```
 
-# 启动
-cargo run --example echo
+## 本地 Agent 一条命令接入
+
+```bash
+# Claude Code ACP
+cargo run --bin wechat-agent -- --login --agent claude
+
+# Codex ACP
+cargo run --bin wechat-agent -- --login --agent codex
+
+# OpenClaw ACP
+cargo run --bin wechat-agent -- --login --agent openclaw
+```
+
+其他也支持：
+
+```bash
+# OpenAI
+OPENAI_API_KEY=... cargo run --bin wechat-agent -- --agent openai
+
+# Anthropic
+ANTHROPIC_API_KEY=... cargo run --bin wechat-agent -- --agent anthropic
 ```
 
 ## 示例

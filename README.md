@@ -25,13 +25,33 @@ For Chinese docs, see [README.zh-CN.md](./README.zh-CN.md).
 
 ```bash
 cd /Volumes/ok/Linux_dev_rewrite/wechat_dev/wechat-rs-sdk
-cargo check --examples
+cargo check --all-targets
 
-# login first
-cargo run --example echo -- login
+# one-command launcher (login + start Codex ACP)
+cargo run --bin wechat-agent -- --login --agent codex
+```
 
-# start bot
-cargo run --example echo
+## One Command For Local Agents
+
+```bash
+# Claude Code ACP
+cargo run --bin wechat-agent -- --login --agent claude
+
+# Codex ACP
+cargo run --bin wechat-agent -- --login --agent codex
+
+# OpenClaw ACP
+cargo run --bin wechat-agent -- --login --agent openclaw
+```
+
+Also supported:
+
+```bash
+# OpenAI
+OPENAI_API_KEY=... cargo run --bin wechat-agent -- --agent openai
+
+# Anthropic
+ANTHROPIC_API_KEY=... cargo run --bin wechat-agent -- --agent anthropic
 ```
 
 ## Examples

@@ -188,16 +188,23 @@ impl AcpAgent {
             })),
         };
 
-        agent
-            .rpc_call(
-                "initialize",
-                json!({
-                    "protocolVersion": "0.2",
-                    "clientInfo": { "name": "wechat-rs-sdk", "version": env!("CARGO_PKG_VERSION") },
-                    "clientCapabilities": {}
-                }),
-            )
-            .await?;
+        let init_payload = |protocol_version: u64| {
+            json!({
+                "protocolVersion": protocol_version,
+                "clientInfo": { "name": "wechat-rs-sdk", "version": env!("CARGO_PKG_VERSION") },
+                "clientCapabilities": {}
+            })
+        };
+
+        let init_result = agent.rpc_call("initialize", init_payload(1)).await;
+        if let Err(err) = init_result {
+            let msg = err.to_string();
+            if msg.contains("protocolVersion") || msg.contains("Invalid params") {
+                agent.rpc_call("initialize", init_payload(2)).await?;
+            } else {
+                return Err(err);
+            }
+        }
 
         Ok(agent)
     }
