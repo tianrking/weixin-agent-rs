@@ -12,6 +12,46 @@
 - English: [README.en.md](./README.en.md)
 - Español: [README.es.md](./README.es.md)
 
+## 效果预览
+
+### 1. 扫码登录（终端二维码）
+![扫码登录](./media/scan_code.png)
+
+### 2. 聊天时候终端显示（入站/出站日志）
+![终端日志](./media/in_chat.png)
+
+### 3. 手机聊天体验（可控制 Claude/Codex/OpenClaw，后续将支持 NanoBot/PicoClaw）
+![手机聊天体验](./media/on_my_phone.png)
+
+### 4. 欢迎加入讨论群组
+![群聊效果](./media/wechat_agent_group.JPG)
+
+## 使用流程（先看这段）
+
+1. 准备环境  
+安装 `wechat-agent` CLI 与 Node.js（`npx` 需要），确保能联网访问 WeChat iLink API 与你选择的 Agent 后端。
+
+2. 登录一次  
+```bash
+wechat-agent --login --agent claude
+```
+终端会打印二维码，用微信“扫一扫”登录；登录成功后会输出 `account_id`。
+
+3. 固定账号启动（推荐）  
+```bash
+wechat-agent --agent claude --account <account_id>
+```
+多账号场景下强烈建议始终带 `--account`，避免命中历史旧 token。
+
+4. 选择 Agent 模式  
+- 本地 ACP：`claude` / `codex` / `openclaw`  
+- 云模型：`openai` / `anthropic`
+
+5. 发送消息验证  
+在微信里给机器人发消息，看终端日志：  
+- 入站日志：`inbound message: ...`  
+- 出站日志：`outbound reply sent: ...`
+
 ## 功能概览
 
 - 扫码登录（`get_bot_qrcode`、`get_qrcode_status`）
@@ -27,30 +67,27 @@
 ## 快速开始
 
 ```bash
-cd /Volumes/ok/Linux_dev_rewrite/wechat_dev/wechat-rs-sdk
-cargo check --all-targets
-
 # 一条命令（登录 + 启动 Codex ACP）
-cargo run --bin wechat-agent -- --login --agent codex
+wechat-agent --login --agent codex
 ```
 
 ## 一条命令接入本地 Agent
 
 ```bash
 # Claude Code ACP
-cargo run --bin wechat-agent -- --login --agent claude
+wechat-agent --login --agent claude
 
 # Codex ACP
-cargo run --bin wechat-agent -- --login --agent codex
+wechat-agent --login --agent codex
 
 # OpenClaw ACP
-cargo run --bin wechat-agent -- --login --agent openclaw
+wechat-agent --login --agent openclaw
 ```
 
 强制指定账号（多账号场景强烈建议）：
 
 ```bash
-cargo run --bin wechat-agent -- --agent claude --account <account_id>
+wechat-agent --agent claude --account <account_id>
 ```
 
 `account_id` 可从登录输出获得，例如：`login success: xxx-im-bot`。
@@ -59,10 +96,10 @@ cargo run --bin wechat-agent -- --agent claude --account <account_id>
 
 ```bash
 # OpenAI
-OPENAI_API_KEY=... cargo run --bin wechat-agent -- --agent openai
+OPENAI_API_KEY=... wechat-agent --agent openai
 
 # Anthropic
-ANTHROPIC_API_KEY=... cargo run --bin wechat-agent -- --agent anthropic
+ANTHROPIC_API_KEY=... wechat-agent --agent anthropic
 ```
 
 ## 运行时行为
@@ -75,7 +112,7 @@ ANTHROPIC_API_KEY=... cargo run --bin wechat-agent -- --agent anthropic
 ## 排障
 
 - `session expired (errcode -14)`：token 过期，请重新登录，或强制指定账号：
-  - `cargo run --bin wechat-agent -- --agent claude --account <account_id>`
+  - `wechat-agent --agent claude --account <account_id>`
 - 多账号场景下建议始终加 `--account <account_id>`，避免命中旧 token。
 
 ## 示例

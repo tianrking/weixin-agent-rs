@@ -27,30 +27,27 @@ Language versions:
 ## Quick Start
 
 ```bash
-cd /Volumes/ok/Linux_dev_rewrite/wechat_dev/wechat-rs-sdk
-cargo check --all-targets
-
 # one command (login + start Codex ACP)
-cargo run --bin wechat-agent -- --login --agent codex
+wechat-agent --login --agent codex
 ```
 
 ## One Command For Local Agents
 
 ```bash
 # Claude Code ACP
-cargo run --bin wechat-agent -- --login --agent claude
+wechat-agent --login --agent claude
 
 # Codex ACP
-cargo run --bin wechat-agent -- --login --agent codex
+wechat-agent --login --agent codex
 
 # OpenClaw ACP
-cargo run --bin wechat-agent -- --login --agent openclaw
+wechat-agent --login --agent openclaw
 ```
 
 Force a specific account (recommended for multi-account setups):
 
 ```bash
-cargo run --bin wechat-agent -- --agent claude --account <account_id>
+wechat-agent --agent claude --account <account_id>
 ```
 
 You can copy `account_id` from login output, e.g. `login success: xxx-im-bot`.
@@ -59,10 +56,10 @@ You can copy `account_id` from login output, e.g. `login success: xxx-im-bot`.
 
 ```bash
 # OpenAI
-OPENAI_API_KEY=... cargo run --bin wechat-agent -- --agent openai
+OPENAI_API_KEY=... wechat-agent --agent openai
 
 # Anthropic
-ANTHROPIC_API_KEY=... cargo run --bin wechat-agent -- --agent anthropic
+ANTHROPIC_API_KEY=... wechat-agent --agent anthropic
 ```
 
 ## Runtime Behavior
@@ -74,7 +71,7 @@ ANTHROPIC_API_KEY=... cargo run --bin wechat-agent -- --agent anthropic
 ## Troubleshooting
 
 - `session expired (errcode -14)`: token expired. Re-login and/or force account:
-  - `cargo run --bin wechat-agent -- --agent claude --account <account_id>`
+  - `wechat-agent --agent claude --account <account_id>`
 - In multi-account environments, prefer always using `--account`.
 
 ## Examples
