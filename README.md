@@ -31,7 +31,7 @@
 ### 3. 实用优雅的命令交互
 ![命令交互](./media/cool_cli_01.png)
 
-### 4. 瞬移式 Space 管理
+### 4. 实用优雅的命令交互（Space 管理）
 ![Space 管理](./media/cool_cli_02.png)
 
 ### 5. 手机聊天体验（可控制 Claude/Codex/OpenClaw，后续将支持 NanoBot/PicoClaw）

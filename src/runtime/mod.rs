@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -364,7 +364,8 @@ struct SpawnSpec {
 const POWERSHELL_EXE: &str = "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe";
 
 fn resolve_spawn_command(command: &str, args: &[String]) -> SpawnSpec {
-    if cfg!(windows) {
+    #[cfg(windows)]
+    {
         if let Some(path) = resolve_command_in_path(command) {
             let ext = Path::new(&path)
                 .extension()
@@ -405,10 +406,13 @@ fn resolve_spawn_command(command: &str, args: &[String]) -> SpawnSpec {
         };
     }
 
-    SpawnSpec {
-        available: command_exists_non_windows(command),
-        command: command.to_string(),
-        args: args.to_vec(),
+    #[cfg(not(windows))]
+    {
+        SpawnSpec {
+            available: command_exists_non_windows(command),
+            command: command.to_string(),
+            args: args.to_vec(),
+        }
     }
 }
 
@@ -439,6 +443,7 @@ fn resolve_command_in_path(command: &str) -> Option<String> {
     None
 }
 
+#[cfg(not(windows))]
 fn command_exists_non_windows(command: &str) -> bool {
     let path = Path::new(command);
     if path.components().count() > 1 || path.is_absolute() {
@@ -452,7 +457,7 @@ fn command_exists_non_windows(command: &str) -> bool {
 fn native_codex_command() -> Option<(String, Vec<String>)> {
     #[cfg(windows)]
     {
-        let node_dir = PathBuf::from(r"C:\Program Files\nodejs");
+        let node_dir = std::path::PathBuf::from(r"C:\Program Files\nodejs");
         let node = node_dir.join("node.exe");
         let codex_js = node_dir.join("node_modules").join("@openai").join("codex").join("bin").join("codex.js");
         if node.exists() && codex_js.exists() {
