@@ -5,7 +5,7 @@
 ![License](https://img.shields.io/badge/License-MIT-blue)
 ![Release](https://img.shields.io/github/v/release/tianrking/weixin-agent-rs?sort=semver)
 
-一个现代化的 Rust WeChat iLink Bot SDK，支持可插拔 Agent，并内置统一启动器 `wechat-agent`。
+一个偏 CLI、可管理多账号与多空间的 Rust WeChat iLink 工具链。核心入口是 `wechat-agent`，重点是安全、快、稳、小，而不是做成笨重的控制面板。
 
 语言版本：
 - 中文（默认）：`README.md`
@@ -14,11 +14,11 @@
 
 ## 项目亮点
 
-- 一条命令接入 Agent：`claude` / `codex` / `openclaw` / `openai` / `anthropic`
-- 终端与手机双视角可观测：扫码、入站日志、出站日志、回退回复全链路可见
-- 多账号可靠运行：支持强制 `--account`，避免旧 token 干扰
-- 发布即分发：各平台构建成功后立即上传 Release，不被单点失败阻塞
-- 跨平台交付：macOS、Windows、Ubuntu `.deb` 与 Linux 可移植 `tar.gz` 同步提供
+- `space` 抽象：把微信账号、默认 agent、用户绑定、日志和运行状态收进一个轻量空间
+- 多账号管理：支持扫码登录、列出、删除本地账号
+- 多 agent 路由：支持 `claude`、`codex`、`openclaw`、`openai`、`anthropic`、`echo`
+- CLI 优先：`create / ls / start / stop / logs / inspect / bind / update`
+- 跨平台交付：macOS、Windows、Ubuntu `.deb` 与 Linux 可移植包
 
 ## 效果预览
 
@@ -30,63 +30,310 @@
 
 ### 3. 实用优雅的命令交互
 ![命令交互](./media/cool_cli_01.png)
-
 ![Space 管理](./media/cool_cli_02.png)
 
-### 4. 手机聊天体验（可控制 Claude/Codex/OpenClaw，后续将支持 NanoBot/PicoClaw）
+### 4. 手机聊天体验（可控制 Claude/Codex/OpenClaw，后续将支持更多 Agent）
 ![手机聊天体验](./media/on_my_phone.png)
 
 ### 5. 欢迎加入讨论群组
 ![群聊效果](./media/wechat_agent_group.JPG)
 
-## 使用流程（先看这段）
+## 安装与环境
 
-1. 准备环境  
-安装 `wechat-agent` CLI 与 Node.js（`npx` 需要），确保能联网访问 WeChat iLink API 与你选择的 Agent 后端。
+需要：
+- Rust 1.78+
+- Node.js / `npx`：用于本地 ACP agent
+- 能访问 WeChat iLink API
 
-2. 登录一次  
-```bash
-wechat-agent --login --agent claude
-```
-终端会打印二维码，用微信“扫一扫”登录；登录成功后会输出 `account_id`。
+云模型额外环境变量：
+- `OPENAI_API_KEY`
+- `ANTHROPIC_API_KEY`
 
-3. 固定账号启动（推荐）  
-```bash
-wechat-agent --agent claude --account <account_id>
-```
-多账号场景下强烈建议始终带 `--account`，避免命中历史旧 token。
+## 核心概念
 
-4. 选择 Agent 模式  
-- 本地 ACP：`claude` / `codex` / `openclaw`  
-- 云模型：`openai` / `anthropic`
-
-5. 发送消息验证  
-在微信里给机器人发消息，看终端日志：  
-- 入站日志：`inbound message: ...`  
-- 出站日志：`outbound reply sent: ...`
-
-## 功能概览
-
-- 扫码登录（`get_bot_qrcode`、`get_qrcode_status`）
-- 长轮询收消息（`getupdates`）+ `get_updates_buf` 断点续拉
-- 文本发送（`sendmessage`）
-- 媒体上传（`getuploadurl` + CDN）
-- 媒体下载解密（AES-128-ECB）
-- 打字状态（`getconfig`、`sendtyping`）
-- 会话过期处理（`errcode = -14`）
-- 多账号本地凭据持久化
-- Agent 抽象层，可接 OpenAI / Anthropic / ACP / 自研后端
+- `account`：本地保存的微信登录凭据
+- `space`：一个独立运行空间，保存默认 agent、绑定账号、用户级 agent 绑定、日志和 pid
+- `bind`：把某个微信用户固定路由到指定 agent
+- `agent`：空间默认 agent 的查看和切换
 
 ## 快速开始
 
+1. 登录一个微信账号
+
 ```bash
-# 一条命令（登录 + 启动 Codex ACP）
-wechat-agent --login --agent codex
+wechat-agent account login
 ```
+
+2. 查看本地账号
+
+```bash
+wechat-agent account ls
+```
+
+3. 创建空间
+
+```bash
+wechat-agent space create dev --agent codex
+```
+
+4. 绑定账号
+
+```bash
+wechat-agent space bind-account dev <account_id>
+```
+
+5. 启动空间
+
+```bash
+wechat-agent space start dev
+```
+
+6. 查看日志
+
+```bash
+wechat-agent space logs dev --tail 100 -f
+```
+
+## 命令总览
+
+```bash
+wechat-agent account login|ls|rm
+wechat-agent space create|ls|ps|inspect|start|stop|restart|logs|rm|bind-account|unbind-account
+wechat-agent agent ls|switch
+wechat-agent bind ls|set|rm
+wechat-agent update
+
+# 低层/实验性
+wechat-agent run --space <name>
+wechat-agent daemon start|status|stop
+```
+
+## 命令详解
+
+### `account`
+
+管理本地微信登录凭据。
+
+```bash
+wechat-agent account login
+```
+
+- 发起扫码登录
+- 成功后输出 `account_id`
+
+```bash
+wechat-agent account ls
+```
+
+- 列出已保存账号
+- 显示 token 是否存在、用户 ID、保存时间
+
+```bash
+wechat-agent account rm <account_id>
+```
+
+- 删除本地账号凭据
+
+### `space`
+
+管理运行空间，是当前 CLI 的核心。
+
+```bash
+wechat-agent space create <name> --agent <agent> [--account <account_id>]
+```
+
+- 创建空间
+- `name` 会被规范化
+- 默认 agent 不填时使用 `codex`
+
+```bash
+wechat-agent space ls
+wechat-agent space ps
+```
+
+- 列出空间
+- 显示运行状态、pid、默认 agent、绑定账号、用户绑定数量
+
+```bash
+wechat-agent space inspect <name>
+```
+
+- 输出完整 JSON
+- 包含空间目录、日志文件、pid 文件、当前 pid、用户绑定等
+
+```bash
+wechat-agent space start <name>
+wechat-agent space stop <name>
+wechat-agent space restart <name>
+```
+
+- 后台启动、停止、重启空间
+- `start` 需要该空间已经绑定账号
+
+```bash
+wechat-agent space logs <name> --tail 100 -f
+```
+
+- 查看空间日志
+- `--tail` 控制末尾行数
+- `-f`/`--follow` 持续跟随
+
+```bash
+wechat-agent space rm <name>
+```
+
+- 删除空间
+- 运行中的空间不能直接删除，必须先 `stop`
+
+```bash
+wechat-agent space bind-account <name> <account_id>
+wechat-agent space unbind-account <name>
+```
+
+- 绑定或解绑空间使用的微信账号
+
+### `agent`
+
+查看可用 agent，或切换某个空间的默认 agent。
+
+```bash
+wechat-agent agent ls
+wechat-agent agent switch <space> <agent>
+```
+
+可用 agent：
+- `claude`
+- `codex`
+- `openclaw`
+- `openai`
+- `anthropic`
+- `echo`
+
+### `bind`
+
+做用户级 agent 路由。
+
+```bash
+wechat-agent bind ls <space>
+wechat-agent bind set <space> <user_id> <agent>
+wechat-agent bind rm <space> <user_id>
+```
+
+适合这种场景：
+- 默认走 `codex`
+- 某个用户固定走 `claude`
+
+### `update`
+
+用于源码 checkout 下的自更新。
+
+```bash
+wechat-agent update
+```
+
+行为：
+- 执行 `git pull --ff-only`
+- 执行 `cargo build --release --locked`
+- 输出新的 release 二进制路径
+
+说明：
+- 这是面向源码仓库用户的更新方式
+- 不是二进制自替换升级器
+
+### `daemon` 与 `run`
+
+这两个是低层能力。
+
+```bash
+wechat-agent daemon start
+wechat-agent daemon status
+wechat-agent daemon stop
+```
+
+- 当前是实验性壳层
+- 正常使用不需要先理解 daemon
+
+```bash
+wechat-agent run --space <name>
+```
+
+- 直接以前台方式运行空间
+- 一般由 `space start` 间接调用
+
+## Agent 模式
+
+### 本地 ACP
+
+```bash
+wechat-agent space create dev --agent claude
+wechat-agent space create dev --agent codex
+wechat-agent space create dev --agent openclaw
+```
+
+说明：
+- `claude`、`codex` 会尝试通过本机命令启动 ACP
+- Windows 下会额外处理 `.cmd/.bat/.ps1`
+- `codex` 有 CLI fallback
+
+### 云模型
+
+```bash
+OPENAI_API_KEY=... wechat-agent space create openai-space --agent openai
+ANTHROPIC_API_KEY=... wechat-agent space create anthropic-space --agent anthropic
+```
+
+## 常见流程
+
+### 单账号单空间
+
+```bash
+wechat-agent account login
+wechat-agent account ls
+wechat-agent space create dev --agent codex
+wechat-agent space bind-account dev <account_id>
+wechat-agent space start dev
+wechat-agent space logs dev -f
+```
+
+### 一个空间里给某个用户切换 agent
+
+```bash
+wechat-agent bind set dev user@im.wechat claude
+wechat-agent bind ls dev
+```
+
+### 查看空间状态
+
+```bash
+wechat-agent space ls
+wechat-agent space inspect dev
+```
+
+### 更新当前源码版
+
+```bash
+wechat-agent update
+```
+
+## 排障
+
+- `space has no bound account`
+  说明空间还没绑定微信账号，先执行：
+  `wechat-agent space bind-account <space> <account_id>`
+
+- `failed to initialize local agent`
+  检查本机 `npx`、`codex`、`openclaw` 或相关依赖是否存在
+
+- `session expired (errcode -14)`
+  token 过期，重新登录：
+  `wechat-agent account login`
+
+- Windows 下 `Access is denied` 删除不了 `wechat-agent.exe`
+  说明旧进程还在运行，先停止旧进程再重新构建
 
 ## 预编译 CLI 下载
 
-从 Releases 下载对应平台安装包：  
+从 Releases 下载对应平台安装包：
 <https://github.com/tianrking/weixin-agent-rs/releases>
 
 - macOS Intel: `wechat-agent-<version>-macos-x86_64.dmg`
@@ -99,57 +346,6 @@ wechat-agent --login --agent codex
 - Linux MUSL x86_64: `wechat-agent-<version>-linux-musl-x86_64.tar.gz`
 - Linux MUSL arm64: `wechat-agent-<version>-linux-musl-arm64.tar.gz`
 - Windows: `wechat-agent-<version>-windows-x86_64.exe`
-
-## 一条命令接入本地 Agent
-
-```bash
-# Claude Code ACP
-wechat-agent --login --agent claude
-
-# Codex ACP
-wechat-agent --login --agent codex
-
-# OpenClaw ACP
-wechat-agent --login --agent openclaw
-```
-
-强制指定账号（多账号场景强烈建议）：
-
-```bash
-wechat-agent --agent claude --account <account_id>
-```
-
-`account_id` 可从登录输出获得，例如：`login success: xxx-im-bot`。
-
-## 其他 Agent
-
-```bash
-# OpenAI
-OPENAI_API_KEY=... wechat-agent --agent openai
-
-# Anthropic
-ANTHROPIC_API_KEY=... wechat-agent --agent anthropic
-```
-
-## 运行时行为
-
-- 入站日志会打印：发送方、消息类型、文本预览。
-- 出站日志会打印：回复类型（`text` / `media` / `fallback`）。
-- 当 Agent 返回空响应时，会自动发送兜底文本：
-  - `（模型本轮未返回内容，请再发一次）`
-
-## 排障
-
-- `session expired (errcode -14)`：token 过期，请重新登录，或强制指定账号：
-  - `wechat-agent --agent claude --account <account_id>`
-- 多账号场景下建议始终加 `--account <account_id>`，避免命中旧 token。
-
-## 示例
-
-- `echo`：最小回声机器人
-- `openai`：OpenAI Chat Completions
-- `anthropic`：Anthropic Messages API
-- `acp`：ACP 子进程适配（Claude / Codex / Kimi 等）
 
 ## 贡献
 
