@@ -2,6 +2,7 @@ use std::fs::OpenOptions;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::PathBuf;
 use std::process::Stdio;
+use std::process::{Command, ExitStatus};
 use std::time::Duration;
 
 use sysinfo::{Pid, ProcessesToUpdate, Signal, System};
@@ -30,6 +31,7 @@ async fn main() -> Result<()> {
         "space" => handle_space(&args[1..]).await,
         "agent" => handle_agent(&args[1..]).await,
         "bind" => handle_bind(&args[1..]).await,
+        "update" => handle_update(&args[1..]).await,
         "daemon" => handle_daemon(&args[1..]).await,
         "run" => handle_run(&args[1..]).await,
         "login" => {
@@ -276,6 +278,34 @@ async fn handle_daemon(args: &[String]) -> Result<()> {
             Ok(())
         }
     }
+}
+
+async fn handle_update(args: &[String]) -> Result<()> {
+    if matches!(args.first().map(String::as_str), Some("-h" | "--help" | "help")) {
+        println!("usage: wechat-agent update");
+        println!("updates the current git checkout and rebuilds the release binary");
+        return Ok(());
+    }
+
+    let root = detect_project_root().ok_or_else(|| {
+        WechatError::Api("update requires running inside the project checkout".to_string())
+    })?;
+
+    if !root.join(".git").exists() {
+        return Err(WechatError::Api(format!(
+            "update requires a git checkout: {}",
+            root.to_string_lossy()
+        )));
+    }
+
+    println!("update root: {}", root.to_string_lossy());
+    run_checked("git", &["pull", "--ff-only"], &root)?;
+    run_checked("cargo", &["build", "--release", "--locked"], &root)?;
+    println!(
+        "update complete: binary at {}",
+        root.join("target").join("release").join(exe_name()).to_string_lossy()
+    );
+    Ok(())
 }
 
 async fn handle_run(args: &[String]) -> Result<()> {
@@ -543,6 +573,43 @@ fn option_value(args: &[String], name: &str) -> Option<String> {
         .cloned()
 }
 
+fn detect_project_root() -> Option<PathBuf> {
+    let mut dir = std::env::current_dir().ok()?;
+    loop {
+        if dir.join("Cargo.toml").exists() && dir.join("src").exists() {
+            return Some(dir);
+        }
+        if !dir.pop() {
+            return None;
+        }
+    }
+}
+
+fn run_checked(program: &str, args: &[&str], workdir: &std::path::Path) -> Result<()> {
+    let status = Command::new(program).args(args).current_dir(workdir).status()?;
+    if status.success() {
+        return Ok(());
+    }
+    Err(command_failed(program, args, status))
+}
+
+fn command_failed(program: &str, args: &[&str], status: ExitStatus) -> WechatError {
+    WechatError::Api(format!(
+        "command failed: {} {} (status: {})",
+        program,
+        args.join(" "),
+        status
+    ))
+}
+
+fn exe_name() -> &'static str {
+    if cfg!(windows) {
+        "wechat-agent.exe"
+    } else {
+        "wechat-agent"
+    }
+}
+
 fn required_arg<'a>(args: &'a [String], idx: usize, label: &str) -> Result<&'a str> {
     args.get(idx)
         .map(String::as_str)
@@ -551,7 +618,7 @@ fn required_arg<'a>(args: &'a [String], idx: usize, label: &str) -> Result<&'a s
 
 fn print_help() {
     println!(
-        "wechat-agent\n\nUSAGE:\n  wechat-agent <command>\n\nCORE COMMANDS:\n  account login|ls|rm\n  space create|ls|inspect|start|stop|restart|logs|rm|bind-account|unbind-account\n  agent ls|switch\n  bind ls|set|rm\n\nLOW-LEVEL:\n  run --space <name>\n  daemon start|status|stop  (experimental)\n\nEXAMPLES:\n  wechat-agent account login\n  wechat-agent space create dev --agent codex\n  wechat-agent space bind-account dev my-wechat-bot\n  wechat-agent space start dev\n  wechat-agent space ls\n  wechat-agent space inspect dev\n  wechat-agent space logs dev --tail 100 -f\n"
+        "wechat-agent\n\nUSAGE:\n  wechat-agent <command>\n\nCORE COMMANDS:\n  account login|ls|rm\n  space create|ls|inspect|start|stop|restart|logs|rm|bind-account|unbind-account\n  agent ls|switch\n  bind ls|set|rm\n  update\n\nLOW-LEVEL:\n  run --space <name>\n  daemon start|status|stop  (experimental)\n\nEXAMPLES:\n  wechat-agent account login\n  wechat-agent space create dev --agent codex\n  wechat-agent space bind-account dev my-wechat-bot\n  wechat-agent space start dev\n  wechat-agent space ls\n  wechat-agent space inspect dev\n  wechat-agent space logs dev --tail 100 -f\n  wechat-agent update\n"
     );
 }
 
