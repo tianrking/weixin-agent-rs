@@ -5,7 +5,7 @@
 ![License](https://img.shields.io/badge/License-MIT-blue)
 ![Release](https://img.shields.io/github/v/release/tianrking/weixin-agent-rs?sort=semver)
 
-一个偏 CLI、可管理多账号与多空间的 Rust WeChat iLink 工具链。核心入口是 `wechat-agent`，重点是安全、快、稳、小，而不是做成笨重的控制面板。
+一个现代化的 Rust WeChat iLink Bot SDK，支持可插拔 Agent，并内置统一启动器 `wechat-agent`。
 
 语言版本：
 - 中文（默认）：`README.md`
@@ -14,11 +14,11 @@
 
 ## 项目亮点
 
-- `space` 抽象：把微信账号、默认 agent、用户绑定、日志和运行状态收进一个轻量空间
-- 多账号管理：支持扫码登录、列出、删除本地账号
-- 多 agent 路由：支持 `claude`、`codex`、`openclaw`、`openai`、`anthropic`、`echo`
-- CLI 优先：`create / ls / start / stop / logs / inspect / bind / update`
-- 跨平台交付：macOS、Windows、Ubuntu `.deb` 与 Linux 可移植包
+- 一条命令接入 Agent：`claude` / `codex` / `openclaw` / `openai` / `anthropic`
+- 终端与手机双视角可观测：扫码、入站日志、出站日志、回退回复全链路可见
+- 多账号可靠运行：支持强制 `--account`，避免旧 token 干扰
+- 发布即分发：各平台构建成功后立即上传 Release，不被单点失败阻塞
+- 跨平台交付：macOS、Windows、Ubuntu `.deb` 与 Linux 可移植 `tar.gz` 同步提供
 
 ## 效果预览
 
@@ -30,6 +30,7 @@
 
 ### 3. 实用优雅的命令交互
 ![命令交互](./media/cool_cli_01.png)
+
 ![Space 管理](./media/cool_cli_02.png)
 
 ### 4. 手机聊天体验（可控制 Claude/Codex/OpenClaw，后续将支持更多 Agent）
@@ -38,27 +39,20 @@
 ### 5. 欢迎加入讨论群组
 ![群聊效果](./media/wechat_agent_group.JPG)
 
-## 安装与环境
+## 简单实用流程
 
-需要：
+先准备好：
 - Rust 1.78+
-- Node.js / `npx`：用于本地 ACP agent
-- 能访问 WeChat iLink API
+- Node.js / `npx`
+- 可访问 WeChat iLink API 的网络环境
 
-云模型额外环境变量：
+如果你使用云模型，还需要：
 - `OPENAI_API_KEY`
 - `ANTHROPIC_API_KEY`
 
-## 核心概念
+第一次跑通，按这条最短路径就够了：
 
-- `account`：本地保存的微信登录凭据
-- `space`：一个独立运行空间，保存默认 agent、绑定账号、用户级 agent 绑定、日志和 pid
-- `bind`：把某个微信用户固定路由到指定 agent
-- `agent`：空间默认 agent 的查看和切换
-
-## 快速开始
-
-1. 登录一个微信账号
+1. 登录微信账号
 
 ```bash
 wechat-agent account login
@@ -88,27 +82,19 @@ wechat-agent space bind-account dev <account_id>
 wechat-agent space start dev
 ```
 
-6. 查看日志
+6. 跟日志看运行状态
 
 ```bash
 wechat-agent space logs dev --tail 100 -f
 ```
 
-## 命令总览
+核心概念只有四个：
+- `account`：本地保存的微信登录凭据
+- `space`：一个轻量运行空间，包含账号、默认 agent、绑定、日志和 pid
+- `agent`：空间默认 agent 的查看和切换
+- `bind`：把某个微信用户固定路由到指定 agent
 
-```bash
-wechat-agent account login|ls|rm
-wechat-agent space create|ls|ps|inspect|start|stop|restart|logs|rm|bind-account|unbind-account
-wechat-agent agent ls|switch
-wechat-agent bind ls|set|rm
-wechat-agent update
-
-# 低层/实验性
-wechat-agent run --space <name>
-wechat-agent daemon start|status|stop
-```
-
-## 命令详解
+## 详细指令解析
 
 ### `account`
 
@@ -116,23 +102,13 @@ wechat-agent daemon start|status|stop
 
 ```bash
 wechat-agent account login
-```
-
-- 发起扫码登录
-- 成功后输出 `account_id`
-
-```bash
 wechat-agent account ls
-```
-
-- 列出已保存账号
-- 显示 token 是否存在、用户 ID、保存时间
-
-```bash
 wechat-agent account rm <account_id>
 ```
 
-- 删除本地账号凭据
+- `login`：发起扫码登录，成功后输出 `account_id`
+- `ls`：列出已保存账号，显示 token、用户 ID、保存时间
+- `rm`：删除本地账号凭据
 
 ### `space`
 
@@ -140,57 +116,25 @@ wechat-agent account rm <account_id>
 
 ```bash
 wechat-agent space create <name> --agent <agent> [--account <account_id>]
-```
-
-- 创建空间
-- `name` 会被规范化
-- 默认 agent 不填时使用 `codex`
-
-```bash
 wechat-agent space ls
 wechat-agent space ps
-```
-
-- 列出空间
-- 显示运行状态、pid、默认 agent、绑定账号、用户绑定数量
-
-```bash
 wechat-agent space inspect <name>
-```
-
-- 输出完整 JSON
-- 包含空间目录、日志文件、pid 文件、当前 pid、用户绑定等
-
-```bash
 wechat-agent space start <name>
 wechat-agent space stop <name>
 wechat-agent space restart <name>
-```
-
-- 后台启动、停止、重启空间
-- `start` 需要该空间已经绑定账号
-
-```bash
 wechat-agent space logs <name> --tail 100 -f
-```
-
-- 查看空间日志
-- `--tail` 控制末尾行数
-- `-f`/`--follow` 持续跟随
-
-```bash
 wechat-agent space rm <name>
-```
-
-- 删除空间
-- 运行中的空间不能直接删除，必须先 `stop`
-
-```bash
 wechat-agent space bind-account <name> <account_id>
 wechat-agent space unbind-account <name>
 ```
 
-- 绑定或解绑空间使用的微信账号
+- `create`：创建空间，默认 agent 不填时使用 `codex`
+- `ls` / `ps`：列出空间，显示运行状态、pid、默认 agent、账号、绑定数量
+- `inspect`：输出完整 JSON，包含空间目录、日志、pid、用户绑定
+- `start` / `stop` / `restart`：后台启动、停止、重启空间
+- `logs`：查看或跟随空间日志
+- `rm`：删除空间，运行中的空间必须先 `stop`
+- `bind-account` / `unbind-account`：绑定或解绑空间使用的微信账号
 
 ### `agent`
 
@@ -201,13 +145,8 @@ wechat-agent agent ls
 wechat-agent agent switch <space> <agent>
 ```
 
-可用 agent：
-- `claude`
-- `codex`
-- `openclaw`
-- `openai`
-- `anthropic`
-- `echo`
+当前支持：
+`claude` / `codex` / `openclaw` / `openai` / `anthropic` / `echo`
 
 ### `bind`
 
@@ -219,9 +158,12 @@ wechat-agent bind set <space> <user_id> <agent>
 wechat-agent bind rm <space> <user_id>
 ```
 
-适合这种场景：
-- 默认走 `codex`
-- 某个用户固定走 `claude`
+- `ls`：列出某个空间的用户绑定
+- `set`：把某个用户固定到指定 agent
+- `rm`：移除某个用户的绑定
+
+典型用法：
+默认走 `codex`，某个用户固定走 `claude`
 
 ### `update`
 
@@ -236,29 +178,21 @@ wechat-agent update
 - 执行 `cargo build --release --locked`
 - 输出新的 release 二进制路径
 
-说明：
-- 这是面向源码仓库用户的更新方式
-- 不是二进制自替换升级器
+这是面向源码仓库用户的更新方式，不是二进制自替换升级器。
 
 ### `daemon` 与 `run`
 
-这两个是低层能力。
+这两个是低层能力，普通使用者可以先不碰。
 
 ```bash
 wechat-agent daemon start
 wechat-agent daemon status
 wechat-agent daemon stop
-```
-
-- 当前是实验性壳层
-- 正常使用不需要先理解 daemon
-
-```bash
 wechat-agent run --space <name>
 ```
 
-- 直接以前台方式运行空间
-- 一般由 `space start` 间接调用
+- `daemon`：当前仍是实验性壳层
+- `run --space`：直接以前台方式运行空间，一般由 `space start` 间接调用
 
 ## Agent 模式
 
@@ -280,39 +214,6 @@ wechat-agent space create dev --agent openclaw
 ```bash
 OPENAI_API_KEY=... wechat-agent space create openai-space --agent openai
 ANTHROPIC_API_KEY=... wechat-agent space create anthropic-space --agent anthropic
-```
-
-## 常见流程
-
-### 单账号单空间
-
-```bash
-wechat-agent account login
-wechat-agent account ls
-wechat-agent space create dev --agent codex
-wechat-agent space bind-account dev <account_id>
-wechat-agent space start dev
-wechat-agent space logs dev -f
-```
-
-### 一个空间里给某个用户切换 agent
-
-```bash
-wechat-agent bind set dev user@im.wechat claude
-wechat-agent bind ls dev
-```
-
-### 查看空间状态
-
-```bash
-wechat-agent space ls
-wechat-agent space inspect dev
-```
-
-### 更新当前源码版
-
-```bash
-wechat-agent update
 ```
 
 ## 排障
